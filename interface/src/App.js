@@ -39,20 +39,25 @@ class App extends React.Component {
         let price;
         let volume;
         event.preventDefault();
-        const res = await axios.get(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${this.state.symbol}&apikey=7B9DIHHTAFDTBOGL`);
-        price = res.data['Global Quote']['05. price'];
-        volume = res.data['Global Quote']['06. volume'];
-        let index = price.indexOf('.');
-        if (index == -1) {
-            decimal = 0;
+        const res = await axios.get(`http://localhost:3001/quote?symbol=${this.state.symbol}`, {crossDomain: true});
+        console.log(res);
+        if (res.data.success == 1) {
+            price = res.data.data.price;
+            volume = res.data.data.volume;
+            let index = price.indexOf('.');
+            if (index == -1) {
+                decimal = 0;
+            } else {
+                decimal = price.length - index - 1;
+            };
+            price = Math.round(parseFloat(price) * (10 ** decimal));
+            console.log(`${price}, ${volume}, ${decimal}`);
+            const retVal = await this.state.contract.methods.setStock(Web3.utils.fromAscii(this.state.symbol),
+                                                                      price, volume, decimal).send({from: this.state.account});
+            console.log(retVal);
         } else {
-            decimal = price.length - index - 1;
-        };
-        price = Math.round(parseFloat(price) * (10 ** decimal));
-        console.log(`${price}, ${volume}, ${decimal}`);
-        const retVal = await this.state.contract.methods.setStock(Web3.utils.fromAscii(this.state.symbol),
-                                                                  price, volume, decimal).send({from: this.state.account});
-        console.log(retVal);
+            this.setState({respText: `Failed to call http://localhost:3001/quote?symbol=${this.state.symbol}`});
+        }
     }
 
     async readFromContract(event) {
